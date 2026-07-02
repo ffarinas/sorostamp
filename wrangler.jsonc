@@ -9,11 +9,18 @@
   "compatibility_date": "2025-03-25",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    // OpenNext emits the static + public assets here (the 9.6 MB wasm included;
-    // the 750 MB zkey is NOT here — it lives in R2, see below).
+    // OpenNext emits the static + public assets here (the wasm files included;
+    // the 414 MB / 976 MB zkeys are NOT here — they live in R2, see below).
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Custom domains — Cloudflare manages DNS + TLS on the sorostamp.com zone.
+  // workers_dev stays on so the *.workers.dev URL keeps working too.
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "sorostamp.com", "custom_domain": true },
+    { "pattern": "www.sorostamp.com", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   }
