@@ -1,0 +1,32 @@
+{
+  // Sorostamp — Cloudflare Workers config (OpenNext adapter).
+  // Deploy:  npm run deploy   (builds with webpack, then OpenNext → wrangler)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sorostamp",
+  "main": ".open-next/worker.js",
+  // nodejs_compat (v2 mode for dates >= 2024-09-23) is required by the Worker
+  // bundle: @stellar/stellar-sdk + the contract bindings use Node builtins.
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    // OpenNext emits the static + public assets here (the 9.6 MB wasm included;
+    // the 750 MB zkey is NOT here — it lives in R2, see below).
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+
+  // ── Manual steps before the first deploy (need Fabian's CF account) ──
+  // 1. R2 for the proving key (too big for Worker assets):
+  //      wrangler r2 bucket create sorostamp-zk
+  //      wrangler r2 object put sorostamp-zk/sorostamp_final.zkey \
+  //        --file ../lacre/circuits/sorostamp_final.zkey
+  //    Enable public access (r2.dev or a custom domain), then set at BUILD time:
+  //      NEXT_PUBLIC_ZKEY_URL=https://<r2-public-host>/sorostamp_final.zkey
+  // 2. Sponsor secret (never commit it):
+  //      wrangler secret put SOROSTAMP_SPONSOR_SECRET
+  // 3. Custom domain: add sorostamp.com as a Worker custom domain in the
+  //    dashboard (or `routes` here) — Cloudflare manages the DNS + TLS.
+}

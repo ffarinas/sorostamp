@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+public/zk/*.zkey
+
+# ZK proving key — 750 MB, served from R2 in prod (dev: symlink to lacre/circuits)
+/public/zk/sorostamp_final.zkey
+
+# local de-risk scripts
+/test-*.mjs
+# gitignore sample (personal receipt — dev/demo only, not committed)
+/public/sample-email.eml
+public/zk/sorostamp_body_final.zkey
+
+# build outputs / local state
+/.open-next/
+/.wrangler/
+packages/*/node_modules/
+*.log

@@ -3,19 +3,39 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "cf:build": "next build --webpack && opennextjs-cloudflare build --skipNextBuild",
+    "preview": "npm run cf:build && opennextjs-cloudflare preview",
+    "deploy": "npm run cf:build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
+    "@stellar/stellar-sdk": "^15.1.0",
+    "@zk-email/helpers": "^6.4.2",
     "next": "16.2.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "snarkjs": "^0.7.6",
+    "sorostamp-contract": "file:./packages/sorostamp-contract",
+    "sorostamp-body-contract": "file:./packages/sorostamp-body-contract"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.19.11",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5"
+    "assert": "^2.1.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "process": "^0.11.10",
+    "punycode": "^2.3.1",
+    "stream-browserify": "^3.0.0",
+    "timers-browserify": "^2.0.12",
+    "typescript": "^5",
+    "url": "^0.11.4",
+    "util": "^0.12.5"
   }
 }
