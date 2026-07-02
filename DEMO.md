@@ -45,9 +45,19 @@ inspector editing the amount from $100.00 to $999.00 in two clicks.
 > choose — the email itself never leaves your browser. This proof card is
 > live, on-chain, right now."
 
-## 0:35–1:40 — The demo (the core)
+## 0:35–1:45 — The demo (the core)
 
-**On screen:** Create proof → Proof of Purchase → drop the Anthropic .eml.
+**On screen:** Create proof — the four blueprint cards are visible. Sweep the
+cursor across them while naming each, then select Proof of Purchase.
+
+> "Four proof blueprints. *Proof of Sender* — prove an email genuinely came
+> from a domain: instant anti-phishing. *Proof of Receipt* — prove you received
+> an email, revealing only its subject line. *Custom field* — any signed
+> header, for builders. And the headline, *Proof of Purchase*: facts from the
+> body of the email itself — something zk-email tooling couldn't reach until
+> now. Let's run that one."
+
+**Drop the Anthropic .eml:**
 
 > "My company reimburses my Anthropic subscription. Here's the real receipt —
 > processed entirely in my browser."
@@ -73,7 +83,7 @@ inspector editing the amount from $100.00 to $999.00 in two clicks.
 > "One click, and a Soroban contract on Stellar mainnet verifies the proof and
 > seals the attestation. Gas is sponsored — the user needs no wallet."
 
-## 1:40–2:10 — The verifier's view
+## 1:45–2:15 — The verifier's view
 
 **On screen:** Copy proof link → open it in a second window/phone.
 
@@ -81,7 +91,7 @@ inspector editing the amount from $100.00 to $999.00 in two clicks.
 > Anthropic's own mail server, sealed in a mainnet ledger — and nothing else
 > about the email. My employer sees proof, not my inbox."
 
-## 2:10–2:45 — What ZK is doing (requirement) + close
+## 2:15–2:50 — What ZK is doing (requirement) + close
 
 **On screen:** README architecture diagram, then the repo + sorostamp.com.
 
