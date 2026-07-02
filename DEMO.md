@@ -1,118 +1,106 @@
-# Sorostamp — Demo video script (2–3 min)
+# Sorostamp — Demo video script (2–3 min, English narration)
 
-> Goal of the video: show a **live product** running the **full loop** end-to-end,
-> lead with the **headline** in the first 10 seconds, and land a **quantified hook**.
-> Shoot it as one continuous screen-capture with voiceover; no slides until the end.
-
----
-
-## 0:00–0:12 — The hook (headline first)
-
-**On screen:** the landing page hero.
-
-**Voiceover:**
-> "This is a real bank email. Sorostamp turns it into a zero-knowledge proof on
-> Stellar that says *‘I received a payment’* — provable by anyone, on-chain —
-> **without ever revealing the email.** The email never even leaves my browser."
-
-**Why:** states the headline fact + the privacy guarantee + the chain, immediately.
+> Lead with the headline in the first 10 seconds, show the FULL loop live on
+> mainnet, explain what ZK is doing (a submission requirement), end on the
+> links. One continuous screen capture + voiceover; cut/speed-up only the
+> proving wait.
 
 ---
 
-## 0:12–0:30 — Pick the proof
+## ✅ Pre-flight (do ALL of this BEFORE recording)
 
-**On screen:** click **Create a proof → Proof of Payment**. Show the blueprint cards.
-
-**Voiceover:**
-> "I pick a blueprint — Proof of Payment. Each blueprint reveals exactly one fact
-> from a DKIM-signed email and hides everything else."
-
----
-
-## 0:30–1:00 — Drop the email (privacy beat)
-
-**On screen:** drag the real `.eml` onto the dropzone. Point at the privacy bar
-("processed entirely in your browser"). The file preview appears.
-
-**Voiceover:**
-> "I drop the original email — the raw message my bank actually signed with DKIM.
-> Watch the network tab: the email bytes never get uploaded. The only thing that
-> leaves my machine is a DNS lookup for the bank's *public* DKIM key."
-
-**Shot tip:** have the browser devtools **Network tab** open and visible — show
-that there is **no upload** of the email, only the `/api/dkim` domain lookup.
+1. **Dry-run on sorostamp.com with the Zinli QuickNode email**
+   (`🛍️ ¡Nueva compra con Zinli! - Ref. 711066405671.eml`), start to finish,
+   including Seal. This (a) validates the whole mainnet flow in the browser,
+   (b) **warms the zkey cache** so the recorded take says "Loading the proving
+   key (cached)" instead of a 1 GB download, and (c) leaves a SECOND sealed
+   mainnet proof as a bonus.
+2. **Record with the Anthropic receipt** (`Your receipt from Anthropic…eml`) —
+   it's fresh on mainnet (no replay collision) and it's YOUR story.
+   ⚠️ Reminder: approving its consent panel publishes the attached PDF
+   invoices in the mainnet transaction — same trade you already accepted on
+   testnet. If you'd rather not, swap roles: dry-run with Anthropic, record
+   with the Zinli one (clean consent, 3 facts, no warnings).
+3. **Same browser profile for warm-up and take** (incognito has a separate,
+   cold cache). Close extra tabs, hide the bookmarks bar, 1080p+ display.
+4. Have the public-proof link of the dry-run seal handy (second "verifier"
+   moment), plus a phone or second browser window.
 
 ---
 
-## 1:00–1:50 — Prove in the browser (the headline feature)
+## 0:00–0:15 — The hook
 
-**On screen:** click **Generate proof**. The step list runs: resolving DKIM key →
-building circuit inputs → computing the witness → building the Groth16 proof.
+**On screen:** the Anthropic receipt open (or its screenshot), then dev-tools
+inspector editing the amount from $100.00 to $999.00 in two clicks.
 
-**Voiceover:**
-> "Now it proves — right here in the browser. It's verifying the bank's RSA
-> signature and running a **1.17-million-constraint** zk-email circuit to a
-> **Groth16 proof on BN254**. No server sees the email. This is the hard part,
-> and it's happening on my laptop."
+> "How do you prove you paid for something — without handing over your inbox?
+> A screenshot can be forged in ten seconds. I just did."
 
-**Quantified hook to say out loud:** *1.17M constraints · Groth16 · BN254 ·
-~2 minutes in-browser · email never uploaded.*
+## 0:15–0:35 — What Sorostamp is
 
-**Shot tip:** this is the slow step — either let it run with the progress
-animation, or cut with a "still proving…" caption and rejoin at completion.
+**On screen:** sorostamp.com landing; hover the live proof card.
+
+> "Sorostamp turns any DKIM-signed email into a zero-knowledge proof, verified
+> by a smart contract on Stellar mainnet. You reveal exactly the facts you
+> choose — the email itself never leaves your browser. This proof card is
+> live, on-chain, right now."
+
+## 0:35–1:40 — The demo (the core)
+
+**On screen:** Create proof → Proof of Purchase → drop the Anthropic .eml.
+
+> "My company reimburses my Anthropic subscription. Here's the real receipt —
+> processed entirely in my browser."
+
+**Selection stage appears (the signed body, readable):**
+
+> "This is the signed body. I highlight exactly what I want to reveal —
+> the $100.00 — and nothing else."
+
+**Consent panel:**
+
+> "Before proving, Sorostamp shows me precisely what gets published to
+> complete the verification, scans it for personal data, and asks for my
+> consent. No silent trade-offs."
+
+**Proving (SPEED UP this section in edit; keep the progress bar visible):**
+
+> "A Groth16 proof — 1.8 million constraints — generated right here in the
+> browser, in a web worker."
+
+**Seal on Stellar → sealed card:**
+
+> "One click, and a Soroban contract on Stellar mainnet verifies the proof and
+> seals the attestation. Gas is sponsored — the user needs no wallet."
+
+## 1:40–2:10 — The verifier's view
+
+**On screen:** Copy proof link → open it in a second window/phone.
+
+> "Anyone with the link can verify it: the amount, cryptographically signed by
+> Anthropic's own mail server, sealed in a mainnet ledger — and nothing else
+> about the email. My employer sees proof, not my inbox."
+
+## 2:10–2:45 — What ZK is doing (requirement) + close
+
+**On screen:** README architecture diagram, then the repo + sorostamp.com.
+
+> "The zero-knowledge part is load-bearing: the circuit verifies the sender's
+> RSA DKIM signature and the email's hashes privately, in-browser. The
+> contract checks the BN254 pairing on-chain and finishes the body hash
+> itself — our 'hash completion' technique, which breaks zk-email's body-size
+> wall: facts buried mid-email that would normally need forty million
+> constraints, proven with under two million. Two verifier contracts live on
+> mainnet, fully open source. Sorostamp — prove the fact, keep the email."
+
+**End card:** `sorostamp.com · github.com/ffarinas/sorostamp`
 
 ---
 
-## 1:50–2:20 — Seal on Stellar (the on-chain beat)
+## If something goes sideways mid-take
 
-**On screen:** Step 4. Click **Verify on-chain**. Show "Submitting to Soroban…"
-then the **Sealed / Verified** state.
-
-**Voiceover:**
-> "I submit the proof to our Soroban verifier contract. The contract runs the
-> **BN254 pairing check natively on Stellar**, confirms it's never been sealed
-> before, and writes the attestation on-chain. Gas is sponsored — I never needed
-> a wallet."
-
----
-
-## 2:20–2:50 — The public, verifiable artifact (live product)
-
-**On screen:** open the **public proof page** `/p/<id>`. Show: the readable
-proven fact, "Verified on Stellar testnet", "Email never revealed", the ledger
-number, and click through to **stellar.expert** to show the live contract.
-
-**Voiceover:**
-> "And here's the shareable result. Anyone can open this link and verify the fact
-> on-chain — the proof matches the statement hash sealed in the contract. They see
-> *that* a payment was received. They never see the email, the account, or
-> anything else."
-
-**Shot tip:** open the stellar.expert contract link in a second tab to prove it's
-real, live, on-chain — not a mockup.
-
----
-
-## 2:50–3:00 — Close
-
-**On screen:** back to the proof card / logo.
-
-**Voiceover:**
-> "Sorostamp. Any DKIM-signed email becomes a real-world fact you can prove on
-> Stellar — and nothing else. Real-world ZK, live today."
-
----
-
-## Pre-flight checklist (before recording)
-
-- [ ] Dev server running locally (`npm run dev`) **or** the deployed site, with
-      the sample email available (`public/sample-email.eml` present locally).
-- [ ] The email you demo is one you're comfortable showing the **subject** of —
-      the subject is the field that gets revealed.
-- [ ] Browser **devtools → Network** open during Step 2 to prove "no upload".
-- [ ] A second tab with `stellar.expert/explorer/testnet/contract/<verifier>`.
-- [ ] If proving feels long on camera, pre-warm by loading the zkey once so it's
-      cached, then record.
-- [ ] Optional: a fresh email (never sealed) so the seal shows a **new** tx,
-      not `already_sealed`. (The sample is already on-chain → shows "already
-      sealed — verified", which is still a valid, honest outcome to narrate.)
+- "Already sealed" at step 4 → it's the anti-replay working; the flow still
+  ends green ("Already sealed on-chain — verified"). Usable take, or switch
+  to the other email.
+- RPC hiccup on the public page → it shows "Reading the proof on-chain…" and
+  the browser fallback fills it in seconds. Keep rolling.
