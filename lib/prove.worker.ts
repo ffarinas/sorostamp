@@ -22,7 +22,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 /// <reference lib="webworker" />
 import { Buffer } from "buffer";
-import { BODY_MAX_HEADERS, BODY_MAX_WINDOW, shaMidstate, toLatin1 } from "./prove-body";
+import { BODY_MAX_FROM, BODY_MAX_HEADERS, BODY_MAX_WINDOW, shaMidstate, toLatin1 } from "./prove-body";
 
 // @zk-email/helpers picks its crypto path via `typeof window !== 'undefined'`.
 // A Web Worker has no `window`, so the library would take the NODE path and call
@@ -115,6 +115,12 @@ async function proveHeader(eml: ArrayBuffer, field: string, wasmUrl: string, zke
   let end = hdr.indexOf("\r\n", start);
   if (end < 0) end = hdr.indexOf("\n", start);
   if (end < 0) end = hdr.length;
+  // The circuit packs at most 124 revealed bytes (SorostampGeneric maxRevealLength).
+  // A longer field (marketing subjects, fat From lines) must be truncated here —
+  // an unclamped mask makes the reveal constraints unsatisfiable and the proof
+  // dies with a cryptic snarkjs error instead of a truncated-but-valid reveal.
+  const MAX_HEADER_REVEAL = 124;
+  if (end - start > MAX_HEADER_REVEAL) end = start + MAX_HEADER_REVEAL;
   inputs.headerMask = inputs.emailHeader.map((_, i) => (i >= start && i < end ? "1" : "0"));
   inputs.revealStartIndex = String(start);
 
@@ -192,13 +198,14 @@ async function proveBody(
     throw new Error("Unexpected bytes before bh= in the signed header.");
   }
 
-  // From reveal
+  // From reveal — clamped to the circuit's packed capacity (see proveHeader)
   const fromKey = "from:";
   const fromAt = hdrStr.toLowerCase().indexOf(fromKey);
   if (fromAt < 0) throw new Error("No From header in the signed header.");
   const fromStart = fromAt + fromKey.length;
   let fromEnd = hdrStr.indexOf("\r\n", fromStart);
   if (fromEnd < 0) fromEnd = hdrStr.length;
+  if (fromEnd - fromStart > BODY_MAX_FROM) fromEnd = fromStart + BODY_MAX_FROM;
 
   const windowBytes = body.slice(windowStart, windowEnd);
   const m1 = shaMidstate(body, windowStart);
