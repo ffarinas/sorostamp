@@ -704,7 +704,7 @@ function Step3({ file, field, kind, onProved, onError, onRetry, onSwitchToHeader
     // a different email. Any other body failure (window/tail/attachments) is
     // body-specific: this same email can usually still prove its header, so we
     // offer that fallback instead of a dead end.
-    const headerBudgetFail = /large set of headers|circuit supports/i.test(err);
+    const headerBudgetFail = /large set of headers|limit on our side/i.test(err);
     const canFallbackToHeader = kind === "body" && !headerBudgetFail;
     return (
       <div className="step-pane fade-up">

@@ -43,8 +43,10 @@ function humanizeInputError(e: unknown): Error {
   const m = e instanceof Error ? e.message : String(e);
   if (/Padding to max length|padded message is \d+ long|max is \d+/i.test(m)) {
     return new Error(
-      "This email signs an unusually large set of headers — more than the circuit supports (~1 KB). " +
-        "Transactional emails (receipts, payment or purchase notifications) fit comfortably. Try one of those."
+      "Sorostamp can't prove this particular email yet — its provider signs an unusually " +
+        "large set of headers, more than we can process today. This is a limit on our side, " +
+        "not a problem with your email. Everyday receipts and payment notifications work " +
+        "great — try one of those."
     );
   }
   return e instanceof Error ? e : new Error(m);

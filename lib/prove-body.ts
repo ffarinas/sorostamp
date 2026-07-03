@@ -501,13 +501,13 @@ export type SelectionCheck =
     bytes, all spans inside one 1536-byte window, window inside the body, and
     the public tail after the window small enough for the sealing transaction. */
 export function checkSelection(bodyLen: number, spans: SelSpan[]): SelectionCheck {
-  if (spans.length < 1) return { ok: false, error: "Select at least one thing to reveal." };
-  if (spans.length > 3) return { ok: false, error: "Up to 3 reveals per proof." };
+  if (spans.length < 1) return { ok: false, error: "Highlight at least one thing to reveal." };
+  if (spans.length > 3) return { ok: false, error: "You can reveal up to 3 things per proof — remove one first." };
   for (const s of spans) {
     if (s.end - s.start > BODY_MAX_FACT) {
       return {
         ok: false,
-        error: `One selection is ${s.end - s.start} bytes with its hidden formatting — the limit is ${BODY_MAX_FACT}. Select a shorter span.`,
+        error: "That highlight is a bit too long to prove in one piece. Try selecting just the value (and its label), not a whole paragraph.",
       };
     }
   }
@@ -518,17 +518,19 @@ export function checkSelection(bodyLen: number, spans: SelSpan[]): SelectionChec
   if (last > windowEnd) {
     return {
       ok: false,
-      error: `Your selections span ${last - windowStart} bytes of the email — they must sit within ${BODY_MAX_WINDOW} bytes of each other (one proving window). Select facts that appear close together.`,
+      error: "Those facts are too far apart in the email to prove together. Pick facts that appear near each other, or make a separate proof for the distant one.",
     };
   }
   if (windowEnd > bodyLen) {
-    return { ok: false, error: "The selection sits too close to the end of the email for the proving window." };
+    return { ok: false, error: "That fact is too close to the very end of the email to prove. Try one a little higher up." };
   }
   const suffixLen = bodyLen - windowEnd;
   if (suffixLen > SUFFIX_MAX_BYTES) {
     return {
       ok: false,
-      error: `Everything after your selection (${Math.round(suffixLen / 1024)} KB) must be published on-chain to complete the body hash — too large for one transaction (limit ~${Math.round(SUFFIX_MAX_BYTES / 1024)} KB). Emails with attachments after the facts can't be body-proven.`,
+      error:
+        `To prove a fact from the body, everything after it in the email has to be shared to complete the check — and here that's ${Math.round(suffixLen / 1024)} KB, more than fits in one transaction. ` +
+        "This usually means the email has attachments (like a PDF invoice) after your facts. Pick a fact nearer the end, or prove the sender instead.",
     };
   }
   return { ok: true, windowStart, windowEnd, suffixLen };
