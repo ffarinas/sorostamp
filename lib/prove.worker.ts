@@ -35,6 +35,21 @@ import { BODY_MAX_FROM, BODY_MAX_HEADERS, BODY_MAX_WINDOW, shaMidstate, toLatin1
 
 const MAX_HEADERS_LENGTH = 1088;
 
+/* Translate the library's technical failures into honest, human messages.
+   The most common one: an email that signs an unusually large set of headers
+   overflows the circuit's 1088-byte header budget — @zk-email throws
+   "Padding to max length did not complete properly! …1408 long but max is 1088". */
+function humanizeInputError(e: unknown): Error {
+  const m = e instanceof Error ? e.message : String(e);
+  if (/Padding to max length|padded message is \d+ long|max is \d+/i.test(m)) {
+    return new Error(
+      "This email signs an unusually large set of headers — more than the circuit supports (~1 KB). " +
+        "Transactional emails (receipts, payment or purchase notifications) fit comfortably. Try one of those."
+    );
+  }
+  return e instanceof Error ? e : new Error(m);
+}
+
 type Step = "inputs" | "download" | "witness" | "prove" | "done";
 function post(step: Step, label: string, pct?: number) {
   (self as unknown as Worker).postMessage({ type: "progress", step, label, pct });
@@ -100,10 +115,15 @@ async function proveHeader(eml: ArrayBuffer, field: string, wasmUrl: string, zke
     "@zk-email/helpers/dist/input-generators"
   );
   const rawBuf = Buffer.from(new Uint8Array(eml));
-  const inputs = (await generateEmailVerifierInputs(rawBuf, {
-    maxHeadersLength: MAX_HEADERS_LENGTH,
-    ignoreBodyHashCheck: true,
-  })) as Record<string, unknown> & { emailHeader: string[] };
+  let inputs: Record<string, unknown> & { emailHeader: string[] };
+  try {
+    inputs = (await generateEmailVerifierInputs(rawBuf, {
+      maxHeadersLength: MAX_HEADERS_LENGTH,
+      ignoreBodyHashCheck: true,
+    })) as Record<string, unknown> & { emailHeader: string[] };
+  } catch (e) {
+    throw humanizeInputError(e);
+  }
 
   const hdr = inputs.emailHeader.map((x) => String.fromCharCode(Number(x))).join("");
   const keyName = field.toLowerCase() + ":";
@@ -144,8 +164,22 @@ async function proveHeader(eml: ArrayBuffer, field: string, wasmUrl: string, zke
 async function extractBody(eml: ArrayBuffer) {
   post("inputs", "Verifying DKIM & decoding the body");
   const { verifyDKIMSignature } = await import("@zk-email/helpers/dist/dkim");
+  const { generateEmailVerifierInputsFromDKIMResult } = await import(
+    "@zk-email/helpers/dist/input-generators"
+  );
   const rawBuf = Buffer.from(new Uint8Array(eml));
   const dkim = await verifyDKIMSignature(rawBuf);
+  // Validate the header budget UP FRONT (before the user spends time selecting)
+  // so a too-long-header email fails here with an honest message, not after
+  // selection + consent.
+  try {
+    generateEmailVerifierInputsFromDKIMResult(dkim, {
+      maxHeadersLength: BODY_MAX_HEADERS,
+      ignoreBodyHashCheck: true,
+    });
+  } catch (e) {
+    throw humanizeInputError(e);
+  }
   const body = new Uint8Array(dkim.body).slice();
   // the From line straight from the raw email (display only — the PROVEN From
   // comes out of the circuit's public signals later)
@@ -183,11 +217,17 @@ async function proveBody(
   const facts = [...spans];
   while (facts.length < 3) facts.push(facts[0]);
 
-  // header-side inputs (same path as the generic circuit)
-  const base = generateEmailVerifierInputsFromDKIMResult(dkim, {
-    maxHeadersLength: BODY_MAX_HEADERS,
-    ignoreBodyHashCheck: true,
-  }) as { emailHeader: string[]; emailHeaderLength: string; pubkey: string[]; signature: string[] };
+  // header-side inputs (same path as the generic circuit; header-budget errors
+  // were already surfaced in extractBody, but stay defensive here too)
+  let base: { emailHeader: string[]; emailHeaderLength: string; pubkey: string[]; signature: string[] };
+  try {
+    base = generateEmailVerifierInputsFromDKIMResult(dkim, {
+      maxHeadersLength: BODY_MAX_HEADERS,
+      ignoreBodyHashCheck: true,
+    }) as { emailHeader: string[]; emailHeaderLength: string; pubkey: string[]; signature: string[] };
+  } catch (e) {
+    throw humanizeInputError(e);
+  }
   const hdrU8 = new Uint8Array(base.emailHeader.map(Number));
   const hdrStr = toLatin1(hdrU8);
 

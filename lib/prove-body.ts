@@ -410,59 +410,86 @@ export function textRangeToSpan(sel: Selectable, from: number, to: number): SelS
     surrounding label), so verifiers see "Amount paid $100.00", not a bare
     number. Pure heuristics over the readable text — provider-agnostic.
 
-    Facts usually appear more than once (text/plain part first, HTML part
-    later). We anchor on the LAST occurrence and keep earlier matches that
-    share its proving window: the later the window, the smaller the public
-    suffix — which is both cheaper and more private. */
+    The key choice is WHICH cluster to anchor on: a payment email has the real
+    facts (amount, merchant, reference) grouped together, plus noise elsewhere
+    (a copyright year at the very bottom). We score every 1536-byte window by
+    how many quality facts it holds, prefer windows that contain an actual
+    currency amount, and return that cluster. Copyright years and date ranges
+    are excluded outright. */
 export function suggestSpans(sel: Selectable, max = 3): SelSpan[] {
-  type M = { from: number; to: number };
-  const found: M[] = [];
-  const amount = /(?:[$€£]|USD|EUR|Bs\.?)\s?\d[\d.,]*/g;
+  type Hit = { from: number; to: number; isAmount: boolean };
+  const hits: Hit[] = [];
   let m: RegExpExecArray | null;
-  while ((m = amount.exec(sel.text))) found.push({ from: m.index, to: m.index + m[0].length });
+
+  const amount = /(?:[$€£]|USD|EUR|Bs\.?)\s?\d[\d.,]*\d/g;
+  while ((m = amount.exec(sel.text))) hits.push({ from: m.index, to: m.index + m[0].length, isAmount: true });
+
   const ref = /\b\d[\d-]{7,19}\b/g;
   while ((m = ref.exec(sel.text))) {
-    if (/\d{8,}/.test(m[0].replace(/-/g, ""))) found.push({ from: m.index, to: m.index + m[0].length });
+    const bare = m[0].replace(/-/g, "");
+    if (!/\d{8,}/.test(bare)) continue;
+    // skip copyright years ("© 1999-2026" → "19992026") and date ranges
+    if (/^(?:19|20)\d{2}(?:19|20)\d{2}$/.test(bare)) continue;
+    const before = sel.text.slice(Math.max(0, m.index - 26), m.index).toLowerCase();
+    if (/copyright|©|rights reserved|\bcopy\b/.test(before)) continue;
+    hits.push({ from: m.index, to: m.index + m[0].length, isAmount: false });
   }
-  if (!found.length) return [];
-  found.sort((a, b) => a.from - b.from);
+  if (!hits.length) return [];
+  hits.sort((a, b) => a.from - b.from);
 
   // extend left for label context ("Monto $49.0", not a bare "$49.0"). Visible
   // chars ≠ raw bytes (HTML tags hide between them), so try word starts from
   // the farthest and shrink until the RAW span fits the circuit's fact limit.
-  const withContext = (r: M): SelSpan | null => {
+  const withContext = (r: Hit): SelSpan | null => {
     let f = Math.max(0, r.from - 24);
     while (f > 0 && !/\s/.test(sel.text[f - 1])) f--;
+    // never let the label context reach across an email address / URL into a
+    // third party's data — start after the last "@" or "://" in the context
+    const ctx = sel.text.slice(f, r.from);
+    const at = Math.max(ctx.lastIndexOf("@"), ctx.lastIndexOf("://"));
+    if (at >= 0) {
+      f += at + 1;
+      while (f < r.from && !/\s/.test(sel.text[f])) f++;
+      while (f < r.from && /\s/.test(sel.text[f])) f++;
+    }
     while (f < r.from) {
       while (f < r.from && !/[A-Za-z0-9$€£]/.test(sel.text[f])) f++;
       const span = textRangeToSpan(sel, f, r.to);
       if (span && span.end - span.start <= BODY_MAX_FACT) return span;
-      // too many hidden bytes — drop the leftmost word and retry
       while (f < r.from && !/\s/.test(sel.text[f])) f++;
       while (f < r.from && /\s/.test(sel.text[f])) f++;
     }
     return textRangeToSpan(sel, r.from, r.to);
   };
 
-  const dedupe = new Set<string>();
-  const chosen: SelSpan[] = [];
-  const fits = (cand: SelSpan) => {
-    const all = [...chosen, cand];
-    const first = Math.min(...all.map((s) => s.start));
-    const last = Math.max(...all.map((s) => s.end));
-    return last - Math.floor(first / 64) * 64 <= BODY_MAX_WINDOW;
-  };
-  // walk from the LAST match backwards
-  for (let i = found.length - 1; i >= 0 && chosen.length < max; i--) {
-    const key = sel.text.slice(found[i].from, found[i].to);
-    if (dedupe.has(key)) continue;
-    const span = withContext(found[i]);
-    if (!span || span.end - span.start > BODY_MAX_FACT) continue;
-    if (!fits(span)) continue;
-    dedupe.add(key);
-    chosen.push(span);
+  // resolve every hit to a raw span; drop any that can't fit a single fact
+  const spans = hits
+    .map((h) => ({ h, span: withContext(h) }))
+    .filter((x): x is { h: Hit; span: SelSpan } => !!x.span && x.span.end - x.span.start <= BODY_MAX_FACT);
+  if (!spans.length) return [];
+
+  // slide a window seeded at each hit; keep the following hits whose combined
+  // raw span still fits BODY_MAX_WINDOW. Score = (#facts, has-amount, position).
+  let best: { picks: { h: Hit; span: SelSpan }[]; score: number } | null = null;
+  for (let i = 0; i < spans.length; i++) {
+    const picks: { h: Hit; span: SelSpan }[] = [];
+    const seen = new Set<string>();
+    for (let j = i; j < spans.length && picks.length < max; j++) {
+      const key = sel.text.slice(spans[j].h.from, spans[j].h.to);
+      if (seen.has(key)) continue;
+      const all = [...picks, spans[j]];
+      const lo = Math.min(...all.map((p) => p.span.start));
+      const hi = Math.max(...all.map((p) => p.span.end));
+      if (hi - Math.floor(lo / 64) * 64 > BODY_MAX_WINDOW) break;
+      seen.add(key);
+      picks.push(spans[j]);
+    }
+    // prefer more facts, then windows containing an amount, then earlier ones
+    const hasAmount = picks.some((p) => p.h.isAmount) ? 1 : 0;
+    const score = picks.length * 10 + hasAmount * 5 - i * 0.001;
+    if (!best || score > best.score) best = { picks, score };
   }
-  return chosen.sort((a, b) => a.start - b.start);
+  return best ? best.picks.map((p) => p.span).sort((a, b) => a.start - b.start) : [];
 }
 
 /* ── selection validation + window / suffix split ────────────────────── */
