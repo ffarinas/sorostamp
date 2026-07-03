@@ -537,12 +537,16 @@ function SelectStage({ selectable, body, spans, setSpans, onContinue, hint }: {
   );
 }
 
-function Step3({ file, field, kind, onProved, onError }: {
+function Step3({ file, field, kind, onProved, onError, onRetry, onSwitchToHeader }: {
   file: File;
   field: string;
   kind: "header" | "body";
   onProved: (r: AnyResult) => void;
   onError: (msg: string) => void;
+  /** back to Step 2 to drop a different email */
+  onRetry: () => void;
+  /** fall back to a header proof (Proof of Sender) for THIS same email */
+  onSwitchToHeader: () => void;
 }) {
   const [progress, setProgress] = useState<ProveProgress | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -695,11 +699,28 @@ function Step3({ file, field, kind, onProved, onError }: {
   }
 
   if (err) {
+    // A header-budget failure ("large set of headers") kills EVERY mode for this
+    // email — both circuits share the 1 KB header limit — so the only way out is
+    // a different email. Any other body failure (window/tail/attachments) is
+    // body-specific: this same email can usually still prove its header, so we
+    // offer that fallback instead of a dead end.
+    const headerBudgetFail = /large set of headers|circuit supports/i.test(err);
+    const canFallbackToHeader = kind === "body" && !headerBudgetFail;
     return (
       <div className="step-pane fade-up">
         <div className="gen-wrap">
           <h2 className="display gen-title">Couldn&apos;t generate the proof.</h2>
-          <p className="gen-sub" style={{ color: "var(--burned)", maxWidth: 460 }}>{err}</p>
+          <p className="gen-sub" style={{ color: "var(--burned)", maxWidth: 470 }}>{err}</p>
+          <div style={{ display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap", justifyContent: "center" }}>
+            {canFallbackToHeader && (
+              <Btn variant="primary" onClick={onSwitchToHeader} icon={<Ic.mail style={{ width: 15, height: 15 }} />}>
+                Prove its sender instead
+              </Btn>
+            )}
+            <button className="btn-plain" onClick={onRetry}>
+              <Ic.upload style={{ width: 15, height: 15 }} /> Try another email
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -864,8 +885,14 @@ export function AppFlow({ go, initialBlueprint, pushToast, showCoach, onCoachDis
   const [file, setFile] = useState<File | null>(null);
   // The header field the proof will reveal: the blueprint's preset, or the
   // user's pick for the Custom blueprint. Body blueprints ignore `field`.
-  const field = bp === "custom" ? customField : blueprintField(bp);
-  const kind = blueprintKind(bp);
+  const blueprintFieldVal = bp === "custom" ? customField : blueprintField(bp);
+  // When a body proof dead-ends on a body-specific limit, the user can fall
+  // back to a header proof of THIS email (reveal the From). `headerOverride`
+  // forces that mode; `stepNonce` bumps to remount Step3 so it re-runs.
+  const [headerOverride, setHeaderOverride] = useState(false);
+  const [stepNonce, setStepNonce] = useState(0);
+  const field = headerOverride ? "from" : blueprintFieldVal;
+  const kind = headerOverride ? ("header" as const) : blueprintKind(bp);
   const [proveResult, setProveResult] = useState<AnyResult | null>(null);
   const [sealResult, setSealResult] = useState<SealResult | null>(null);
 
@@ -875,7 +902,12 @@ export function AppFlow({ go, initialBlueprint, pushToast, showCoach, onCoachDis
 
   const reset = () => {
     setStep(1); setMax(1); setFile(null); setProveResult(null); setSealResult(null);
+    setHeaderOverride(false);
   };
+  // error → drop a different email (back to Step 2, clear the fallback mode)
+  const retryStep2 = () => { setHeaderOverride(false); setFile(null); goStep(2); };
+  // error → prove this same email's header instead of its body
+  const switchToHeader = () => { setHeaderOverride(true); setStepNonce((n) => n + 1); };
 
   const canNext = step === 1 ? !!bp : step === 2 ? !!file : true;
 
@@ -924,11 +956,14 @@ export function AppFlow({ go, initialBlueprint, pushToast, showCoach, onCoachDis
           {step === 2 && <Step2 file={file} setFile={setFile} showCoach={showCoach && step === 2} onCoachDismiss={onCoachDismiss} />}
           {step === 3 && file && (
             <Step3
+              key={`${kind}-${field}-${stepNonce}`}
               file={file}
               field={field}
               kind={kind}
               onProved={(r) => { setProveResult(r); goStep(4); }}
               onError={() => {}}
+              onRetry={retryStep2}
+              onSwitchToHeader={switchToHeader}
             />
           )}
           {step === 4 && proveResult && (
