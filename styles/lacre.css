@@ -438,8 +438,9 @@ body::before {
 
 /* 2 · how */
 .ob-how { display: flex; align-items: stretch; justify-content: center; gap: 4px; }
-.obh-card { position: relative; flex: 1; max-width: 150px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+.obh-card { position: relative; flex: 1; min-width: 0; max-width: 150px; display: flex; flex-direction: column; align-items: center; gap: 6px;
   text-align: center; padding: 16px 12px 14px; border: 1px solid var(--line-2); border-radius: 13px; background: var(--surface); }
+.obh-txt { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
 .obh-card.hi { border-color: color-mix(in oklch, var(--valid) 45%, var(--line-2)); background: var(--valid-bg); }
 .obh-n { position: absolute; top: 8px; left: 10px; font-size: 11px; color: var(--ink-3); }
 .obh-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px;
@@ -451,7 +452,15 @@ body::before {
 .obh-flag { font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--valid);
   background: var(--surface); border: 1px solid color-mix(in oklch, var(--valid) 35%, transparent); padding: 3px 7px; border-radius: 999px; margin-top: 2px; }
 .obh-arrow { display: grid; place-items: center; color: var(--ink-3); flex: none; }
-@media (max-width: 520px){ .ob-how { flex-direction: column; align-items: stretch; } .obh-card { max-width: none; flex-direction: row; gap: 12px; text-align: left; align-items: center; } .obh-card .obh-ic { margin: 0; } .obh-arrow { transform: rotate(90deg); } .obh-arrow svg { transform: none !important; } .obh-n { display: none; } }
+@media (max-width: 520px){
+  .ob-how { flex-direction: column; align-items: stretch; }
+  .obh-card { max-width: none; flex-direction: row; gap: 12px; text-align: left; align-items: center; }
+  .obh-card .obh-ic { margin: 0; flex: none; }
+  .obh-txt { align-items: flex-start; text-align: left; flex: 1; }
+  .obh-arrow { transform: rotate(90deg); }
+  .obh-arrow svg { transform: none !important; }
+  .obh-n { display: none; }
+}
 
 /* 3 · eml */
 .ob-eml { display: flex; flex-direction: column; gap: 9px; text-align: left; }
@@ -520,3 +529,47 @@ body::before {
 .bp-soon { display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: .04em;
   text-transform: uppercase; color: var(--ink-3); background: var(--surface-inset);
   border: 1px solid var(--line-2); padding: 2px 6px; border-radius: 999px; margin-left: 7px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Mobile hardening — kill horizontal overflow on phones (320–430px).
+   Consolidated overrides; appended last so they win without touching the
+   base rules. Audited against the public proof page, onboarding modal,
+   app flow and landing. Long hashes/addresses/URLs must wrap, fixed-width
+   cards must go fluid, and tight paddings must relax.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* safety net: nothing should force the page wider than the viewport */
+html, body { overflow-x: clip; max-width: 100%; }
+
+/* long unbreakable strings (hashes, contract ids, packed ?s= signals) */
+.pc-mv, .vc-d, .hp-hrow .hv, .ss-v { overflow-wrap: anywhere; word-break: break-word; }
+.hp-hrow .hv { white-space: normal; }
+
+@media (max-width: 600px) {
+  /* onboarding modal */
+  .ob-modal { padding: 22px 16px 18px; border-radius: 18px; }
+  .obm-email { width: 100%; max-width: 300px; }
+  .ob-title { max-width: 100%; }
+
+  /* public proof card + its metadata */
+  .proofcard { padding: 46px 18px 26px; }
+  .pc-meta { max-width: 100%; }
+  .pc-mrow { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .pc-mrow .pc-mv, .pc-mrow .copyval { max-width: 100%; }
+
+  /* verify page checks: single column below phones */
+  .vp-checks { grid-template-columns: 1fr; }
+
+  /* app flow card + stepper */
+  .flow-card { padding: 20px 15px; }
+
+  /* landing hero preview + footer */
+  .hero-proof { max-width: 100%; padding: 22px 18px; }
+  .foot-cols { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 420px) {
+  .obm-email { font-size: 10px; padding: 12px 14px; }
+  .proofcard { padding: 42px 14px 22px; }
+  .foot-cols { grid-template-columns: 1fr; }
+}

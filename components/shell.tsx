@@ -111,12 +111,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // first-run onboarding
+  // first-run onboarding — but NOT on the public proof page (/p/[id]): that
+  // visitor is a verifier following a shared link, not someone creating a
+  // proof, so the "how to create" tutorial just gets in the way of the proof
+  // they came to check.
   useEffect(() => {
+    if (pathname.startsWith("/p/")) return;
     let seen = null;
     try { seen = localStorage.getItem(ONBOARD_KEY); } catch (e) {}
     if (!seen) { setObOpen(true); setCoachDone(false); }
-  }, []);
+  }, [pathname]);
 
   const markOnboarded = (dontShow: boolean) => {
     if (dontShow) { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) {} }

@@ -43,9 +43,11 @@ function ArtHow() {
             <div className={"obh-card" + (s.hi ? " hi" : "")}>
               <span className="obh-n mono">{i + 1}</span>
               <span className="obh-ic"><I style={{ width: 19, height: 19 }} /></span>
-              <span className="obh-t">{s.t}</span>
-              <span className="obh-d">{s.d}</span>
-              {s.hi && <span className="obh-flag">stays on your device</span>}
+              <span className="obh-txt">
+                <span className="obh-t">{s.t}</span>
+                <span className="obh-d">{s.d}</span>
+                {s.hi && <span className="obh-flag">stays on your device</span>}
+              </span>
             </div>
             {i < OB_HOW.length - 1 && <span className="obh-arrow"><Ic.chevron style={{ width: 16, height: 16, transform: "rotate(-90deg)" }} /></span>}
           </Fragment>
